@@ -1,6 +1,7 @@
 #![feature(portable_simd)]
 #![feature(slice_split_once)]
 #![feature(hasher_prefixfree_extras)]
+#![feature(ptr_cast_array)]
 
 use std::{
     borrow::Borrow,
@@ -175,17 +176,21 @@ fn main() {
     print!("}}");
 }
 
-#[inline]
 fn next_newline(map: &[u8], at: usize) -> usize {
-    let rest = &map[at..];
-    let newline_eq = NEWL.simd_eq(u8x64::load_or_default(rest));
+    let rest = unsafe { map.get_unchecked(at..) };
+    let against = if let Some((restu8x64, _)) = rest.split_first_chunk::<64>() {
+        u8x64::from_array(*restu8x64)
+    } else {
+        u8x64::load_or_default(rest)
+    };
+    let newline_eq = NEWL.simd_eq(against);
     if let Some(i) = newline_eq.first_set() {
         i
     } else {
         // we know, line is at most 100+1+5 = 106b,
         // but we can only search 64b, so the search _may_ have to fall back to memchr
         // we know there _must_ be a newline, so rest[64..] must be non-empty
-        let restrest = &rest[64..];
+        let restrest = unsafe { rest.get_unchecked(64..) };
         // SAFETY: restrest is valid for at least restrest.len() bytes
         let next_newline = unsafe {
             libc::memchr(
