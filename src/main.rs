@@ -308,12 +308,14 @@ fn semi_at(line: &[u8]) -> usize {
 #[inline]
 fn parse_temperature(t: &[u8]) -> i16 {
     let tlen = t.len();
-    assert!(tlen >= 3);
-    let sign = i16::from(t[0] != b'-') * 2 - 1;
-    let skip = if t[0] == b'-' { 1 } else { 0 };
-    let mul = if tlen - skip == 4 { 100 } else { 10 };
+    unsafe { std::hint::assert_unchecked(tlen >= 3) };
+    let is_neg = std::hint::select_unpredictable(t[0] == b'-', true, false);
+    let sign = i16::from(!is_neg) * 2 - 1;
+    let skip = usize::from(is_neg);
+    let has_dd = std::hint::select_unpredictable(tlen - skip == 4, true, false);
+    let mul = i16::from(has_dd) * 90 + 10;
     let t1 = mul * i16::from(t[skip] - b'0');
-    let t2 = if mul == 10 { 0 } else { 1 } * 10 * i16::from(t[tlen - 3] - b'0');
+    let t2 = i16::from(has_dd) * 10 * i16::from(t[tlen - 3] - b'0');
     let t3 = i16::from(t[tlen - 1] - b'0');
     sign * (t1 + t2 + t3)
 }
