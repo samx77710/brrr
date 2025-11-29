@@ -1,4 +1,5 @@
 #![feature(portable_simd)]
+#![feature(cold_path)]
 #![feature(slice_split_once)]
 #![feature(hasher_prefixfree_extras)]
 #![feature(ptr_cast_array)]
@@ -95,9 +96,9 @@ impl AsRef<[u8]> for StrVec {
         unsafe {
             if self.inlined[LAST] != 0x00 {
                 let len = self.inlined[LAST] as usize - 1;
-                // &self.inlined[..len]
                 std::slice::from_raw_parts(self.inlined.as_ptr(), len)
             } else {
+                std::hint::cold_path();
                 let len = usize::from_be(self.heap.0);
                 let ptr = self.heap.1;
                 std::slice::from_raw_parts(ptr, len)
@@ -108,7 +109,12 @@ impl AsRef<[u8]> for StrVec {
 
 impl PartialEq for StrVec {
     fn eq(&self, other: &Self) -> bool {
-        self.as_ref() == other.as_ref()
+        unsafe {
+            self.inlined[LAST] == other.inlined[LAST] && {
+                std::hint::cold_path();
+                self.as_ref() == other.as_ref()
+            }
+        }
     }
 }
 
@@ -202,34 +208,47 @@ fn print(stats: BTreeMap<String, (i16, i64, usize, i16)>) {
     write!(writer, "}}").unwrap();
 }
 
+#[inline(never)]
 fn one(map: &[u8]) -> HashMap<StrVec, (i16, i64, usize, i16), FastHasherBuilder> {
     let mut stats = HashMap::with_capacity_and_hasher(1_000, FastHasherBuilder);
     let mut at = 0;
     while at < map.len() {
         let newline_at = at + next_newline(map, at);
-        let line = &map[at..newline_at];
+        let line = unsafe { map.get_unchecked(at..newline_at) };
         at = newline_at + 1;
-        let (station, temperature) = split_semi(line);
+        let semi = semi_at(line);
+        let station = unsafe { line.get_unchecked(..semi) };
+        let temperature = unsafe { line.get_unchecked(semi + 1..) };
         let t = parse_temperature(temperature);
-        let stats = match stats.get_mut(station) {
-            Some(stats) => stats,
-            None => stats
-                .entry(StrVec::new(station))
-                .or_insert((i16::MAX, 0, 0, i16::MIN)),
-        };
-        stats.0 = stats.0.min(t);
-        stats.1 += i64::from(t);
-        stats.2 += 1;
-        stats.3 = stats.3.max(t);
+        update_stats(&mut stats, station, t);
     }
     stats
 }
 
+fn update_stats(
+    stats: &mut HashMap<StrVec, (i16, i64, usize, i16), FastHasherBuilder>,
+    station: &[u8],
+    t: i16,
+) {
+    let stats = match stats.get_mut(station) {
+        Some(stats) => stats,
+        None => stats
+            .entry(StrVec::new(station))
+            .or_insert((i16::MAX, 0, 0, i16::MIN)),
+    };
+    stats.0 = stats.0.min(t);
+    stats.1 += i64::from(t);
+    stats.2 += 1;
+    stats.3 = stats.3.max(t);
+}
+
+#[inline]
 fn next_newline(map: &[u8], at: usize) -> usize {
     let rest = unsafe { map.get_unchecked(at..) };
-    let against = if let Some((restu8x64, _)) = rest.split_first_chunk::<64>() {
+    let against = if let Some(restu8x64) = rest.first_chunk::<64>() {
         u8x64::from_array(*restu8x64)
     } else {
+        std::hint::cold_path();
         u8x64::load_or_default(rest)
     };
     let newline_eq = NEWL.simd_eq(against);
@@ -239,6 +258,7 @@ fn next_newline(map: &[u8], at: usize) -> usize {
         // we know, line is at most 100+1+5 = 106b,
         // but we can only search 64b, so the search _may_ have to fall back to memchr
         // we know there _must_ be a newline, so rest[64..] must be non-empty
+        std::hint::cold_path();
         let restrest = unsafe { rest.get_unchecked(64..) };
         // SAFETY: restrest is valid for at least restrest.len() bytes
         let next_newline = unsafe {
@@ -255,18 +275,20 @@ fn next_newline(map: &[u8], at: usize) -> usize {
     }
 }
 
-fn split_semi(line: &[u8]) -> (&[u8], &[u8]) {
+#[inline]
+fn semi_at(line: &[u8]) -> usize {
     // we know, line is at most 100+1+5 = 106b
     if line.len() > 64 {
-        line.rsplit_once(|c| *c == b';').unwrap()
+        std::hint::cold_path();
+        line.iter().position(|c| *c == b';').unwrap()
     } else {
         let delim_eq = SEMI.simd_eq(u8x64::load_or_default(line));
         // SAFETY: we're promised there is a ; in every line
-        let index_of_delim = unsafe { delim_eq.first_set().unwrap_unchecked() };
-        (&line[..index_of_delim], &line[index_of_delim + 1..])
+        unsafe { delim_eq.first_set().unwrap_unchecked() }
     }
 }
 
+#[inline]
 fn parse_temperature(t: &[u8]) -> i16 {
     let tlen = t.len();
     assert!(tlen >= 3);
