@@ -137,7 +137,7 @@ struct Stat {
     min: i16,
     max: i16,
     sum: i64,
-    count: usize,
+    count: u32,
 }
 
 impl Default for Stat {
