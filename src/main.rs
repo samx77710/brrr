@@ -66,7 +66,7 @@ struct AllocedStrVec {
 
 impl Drop for AllocedStrVec {
     fn drop(&mut self) {
-        let len = usize::from_be(self.len);
+        let len = usize::from_le(self.len);
         let ptr = self.ptr;
         let slice_ptr = std::ptr::slice_from_raw_parts_mut(ptr, len);
         let _ = unsafe { Box::from_raw(slice_ptr) };
@@ -87,7 +87,7 @@ impl StrVec {
             let ptr = Box::into_raw(s.to_vec().into_boxed_slice());
             Self {
                 heap: ManuallyDrop::new(AllocedStrVec {
-                    len: ptr.len().to_be(),
+                    len: ptr.len().to_le(),
                     ptr: ptr.cast(),
                 }),
             }
@@ -113,7 +113,7 @@ impl AsRef<[u8]> for StrVec {
                 std::slice::from_raw_parts(self.inlined.as_ptr(), len)
             } else {
                 std::hint::cold_path();
-                let len = usize::from_be(self.heap.len);
+                let len = usize::from_le(self.heap.len);
                 let ptr = self.heap.ptr;
                 std::slice::from_raw_parts(ptr, len)
             }
